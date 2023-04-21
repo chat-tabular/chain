@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "outDir": "dist",
+    "module": "commonjs",
+    "target": "es6",
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "allowJs": false,
+    "declaration": true,
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
+    "types": [
+      "node",
+      "@types/mocha"
+    ],
+    "jsx": "react"
+  },
+  "baseUrl": ".",
+  "paths": {
+    "*": [
+      "src/*",
+      "tests/*"
+    ]
+  },
+  "include": [
+    "./src/*"
+  ]
+}
