@@ -32,7 +32,6 @@ Question: {QUESTION} `
 
 export const CHART_PROMPT = `You are working with javascript program to show me the chart by google chart library,  I will give you a \`table: {column: string[], rows: Row[]}\`, where Rows is {[column key]: value}, notice the row value type is string.
 I will ask you question, you should return a javascript function to show chart, powered by google chart libarary
-- chart container DOM element id is {CHART_CONTAINER_ID}
 - function name should be \`${exportedFuncName}\`
 - input parameter as \`table\`
 - the second partameter is the chart container dom element id
