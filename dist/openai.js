@@ -24,7 +24,7 @@ You should not to explain, just show the action number and name.
 
 My Question: {QUESTION}
 `;
-exports.TABLE_PROMPT = `You are working with javascript program, I will give you a \`table: {column: string[], rows: Row[]}\`, where Rows is {[column key]: value}.
+exports.TABLE_PROMPT = `You are working with javascript program, I will give you a \`table: {column: string[], rows: Row[]}\`, where Rows is {[column key]: string}, notice the row value type is string.
 I will ask you question, you should return a javascript function to resolve my question.
 - function name should be \`${exports.exportedFuncName}\`
 - input parameter as \`table\`, output should also return a table type
@@ -37,7 +37,7 @@ My table head rows are """
 """
 
 Question: {QUESTION} `;
-exports.CHART_PROMPT = `You are working with javascript program to show me the chart by google chart library,  I will give you a \`table: {column: string[], rows: Row[]}\`, where Rows is {[column key]: value}.
+exports.CHART_PROMPT = `You are working with javascript program to show me the chart by google chart library,  I will give you a \`table: {column: string[], rows: Row[]}\`, where Rows is {[column key]: value}, notice the row value type is string.
 I will ask you question, you should return a javascript function to show chart, powered by google chart libarary
 - chart container DOM element id is {CHART_CONTAINER_ID}
 - function name should be \`${exports.exportedFuncName}\`
