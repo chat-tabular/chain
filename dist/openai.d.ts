@@ -31,4 +31,5 @@ export declare function toPrompt(type: 'table' | 'chart', table: Table, question
 export declare function decide(columns: string[], question: string, openaiKey: string): Promise<'chart' | 'table' | 'number' | 'unknown'>;
 export declare function chat(prompt: string, openaiKey: string): Promise<OpenaiResult | OpenaiErrorResult>;
 export declare function parseCode(content?: string, starter?: string): string;
+export declare function insights(table: Table, openaiKey: string): Promise<string[]>;
 export {};

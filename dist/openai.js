@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseCode = exports.chat = exports.decide = exports.toPrompt = exports.CHAT_GPT35_MODEL = exports.CHART_PROMPT = exports.TABLE_PROMPT = exports.DECISION_PROMPT = exports.exportedFuncName = void 0;
+exports.insights = exports.parseCode = exports.chat = exports.decide = exports.toPrompt = exports.CHAT_GPT35_MODEL = exports.CHART_PROMPT = exports.TABLE_PROMPT = exports.DECISION_PROMPT = exports.exportedFuncName = void 0;
 const { Configuration, OpenAIApi } = require("openai");
 exports.exportedFuncName = 'window.run';
 exports.DECISION_PROMPT = `You are acting as decision maker, you should choose which actions should be token based on my question.
@@ -37,11 +37,11 @@ My table head rows are """
 """
 
 Question: {QUESTION} `;
-exports.CHART_PROMPT = `You are working with javascript program to show me the chart by google chart library,  I will give you a \`table: {column: string[], rows: Row[]}\`, where Rows is {[column key]: value}, notice the row value type is string.
+exports.CHART_PROMPT = `You are working with javascript program to show me the chart by google chart library,  I will give you a \`table: {column: string[], rows: Row[]}\`, where Rows is {[column key]: string}, notice the row value type is string.
 I will ask you question, you should return a javascript function to show chart, powered by google chart libarary
 - function name should be \`${exports.exportedFuncName}\`
 - input parameter as \`table\`
-- the second partameter is the chart container dom element id
+- the second parameter is the chart container dom element id
 
 You should not to explain the logic, not show sample notes or usages, just write the code.
 
@@ -51,6 +51,19 @@ My table head rows are """
 """
 
 Question: {QUESTION} `;
+const INSIGHT_PROMPT = `You are a data analyzer, who need give some insight questions for my dataset:
+ I will give you a \`table: {column: string[], rows: Row[]}\`, where sample rows is {[column key]: value}
+- the question list should bullets listed
+- no explains
+- at most 5 quesions
+
+My \`table.columns\` is \`{HEADERS}\`
+My table head rows are """
+{ROWS}
+"""
+
+Insights:
+`;
 exports.CHAT_GPT35_MODEL = "gpt-3.5-turbo";
 ;
 function toPrompt(type, table, question, id) {
@@ -125,4 +138,30 @@ function parseCode(content, starter) {
     return lines.slice(startLine + 1, endLine).join('\n');
 }
 exports.parseCode = parseCode;
+function insights(table, openaiKey) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const prompt = INSIGHT_PROMPT.replace('{HEADERS}', table.columns.join(',')).replace('{ROWS}', table.rows
+            .slice(0, 5)
+            .map((r) => table.columns.map((c) => r[c] || '').join(','))
+            .join('\n'));
+        const bullet = '- ';
+        const res = yield chat(prompt, openaiKey);
+        if (res.status) {
+            return [];
+        }
+        else {
+            try {
+                const rough = res.choices[0].message.content || '';
+                return rough
+                    .split('\n')
+                    .filter((l) => l.startsWith(bullet))
+                    .map((l) => l.substring(bullet.length).trim());
+            }
+            catch (err) {
+                return [];
+            }
+        }
+    });
+}
+exports.insights = insights;
 //# sourceMappingURL=openai.js.map

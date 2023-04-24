@@ -30,11 +30,11 @@ My table head rows are """
 
 Question: {QUESTION} `
 
-export const CHART_PROMPT = `You are working with javascript program to show me the chart by google chart library,  I will give you a \`table: {column: string[], rows: Row[]}\`, where Rows is {[column key]: value}, notice the row value type is string.
+export const CHART_PROMPT = `You are working with javascript program to show me the chart by google chart library,  I will give you a \`table: {column: string[], rows: Row[]}\`, where Rows is {[column key]: string}, notice the row value type is string.
 I will ask you question, you should return a javascript function to show chart, powered by google chart libarary
 - function name should be \`${exportedFuncName}\`
 - input parameter as \`table\`
-- the second partameter is the chart container dom element id
+- the second parameter is the chart container dom element id
 
 You should not to explain the logic, not show sample notes or usages, just write the code.
 
@@ -44,6 +44,20 @@ My table head rows are """
 """
 
 Question: {QUESTION} `
+
+const INSIGHT_PROMPT = `You are a data analyzer, who need give some insight questions for my dataset:
+ I will give you a \`table: {column: string[], rows: Row[]}\`, where sample rows is {[column key]: value}
+- the question list should bullets listed
+- no explains
+- at most 5 quesions
+
+My \`table.columns\` is \`{HEADERS}\`
+My table head rows are """
+{ROWS}
+"""
+
+Insights:
+`;
 
 export const CHAT_GPT35_MODEL = "gpt-3.5-turbo";
 interface GptChatChoice {
@@ -135,3 +149,28 @@ export function parseCode(content?: string, starter?: string) {
     const endLine = lines.slice(startLine + 1).findIndex(l => l.trim().startsWith('```')) + startLine + 1;
     return lines.slice(startLine + 1, endLine).join('\n');
 }
+
+export async function insights(table: Table, openaiKey: string): Promise<string[]> {
+    const prompt = INSIGHT_PROMPT.replace('{HEADERS}', table.columns.join(',')).replace(
+      '{ROWS}',
+      table.rows
+        .slice(0, 5)
+        .map((r) => table.columns.map((c) => r[c] || '').join(','))
+        .join('\n')
+    );
+    const bullet = '- ';
+    const res = await chat(prompt, openaiKey);
+    if ((res as OpenaiErrorResult).status) {
+      return [];
+    } else {
+      try {
+        const rough = (res as OpenaiResult).choices[0].message.content || '';
+        return rough
+          .split('\n')
+          .filter((l) => l.startsWith(bullet))
+          .map((l) => l.substring(bullet.length).trim());
+      } catch (err) {
+        return [];
+      }
+    }
+  }
