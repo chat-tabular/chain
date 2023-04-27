@@ -36,7 +36,7 @@ I will ask you question, you should return a javascript function to show chart, 
 - input parameter as \`table\`
 - the second parameter is the chart container dom element id
 
-You should not to explain the logic, not show sample notes or usages, just write the code.
+You should write code in the first paragraph (Markdown formatted),  then explain the logic after it.
 
 My \`table.columns\` is \`{HEADERS}\`
 My table head rows are """
@@ -50,6 +50,8 @@ const INSIGHT_PROMPT = `You are a data analyzer, who need give some insight ques
 - the question list should bullets listed
 - no explains
 - at most 5 quesions
+
+You should write code in the first paragraph (Markdown formatted),  then explain the logic after it.
 
 My \`table.columns\` is \`{HEADERS}\`
 My table head rows are """
@@ -97,8 +99,6 @@ export async function decide(columns: string[], question: string, openaiKey: str
         apiKey: openaiKey,
     });
     
-    const openai = new OpenAIApi(configuration);
-    
     const p = DECISION_PROMPT.replace('{HEADERS}', columns.join(','))
         .replace('{QUESTION}', question);
     const res = await chat(p, openaiKey);
@@ -107,24 +107,24 @@ export async function decide(columns: string[], question: string, openaiKey: str
     } else {
         try{
             const rough = (res as OpenaiResult).choices[0].message.content.toLowerCase();
-            return ['chart', 'table', 'number'].find(t => rough.split('\n')[0].indexOf(t) >= 0) || 'unknown' as any;
+            return ['chart', 'table'].find(t => rough.split('\n')[0].indexOf(t) >= 0) || 'unknown' as any;
         }catch(err){
             return 'unknown';
         }
     }
     return 'unknown';
 }
-export async function chat(prompt: string, openaiKey: string): Promise<OpenaiResult | OpenaiErrorResult>{
+export async function chat(prompt: string, openaiKey: string, temperature?: number): Promise<OpenaiResult | OpenaiErrorResult>{
     const configuration = new Configuration({
         apiKey: openaiKey,
     });
     
     const openai = new OpenAIApi(configuration);
     const result = await openai.createChatCompletion({
-        model: CHAT_GPT35_MODEL,
-        messages: [ {"role": "user", "content": prompt } ],
-        temperature: 0,
-        max_tokens: 1024,
+            model: CHAT_GPT35_MODEL,
+            messages: [ {"role": "user", "content": prompt } ],
+            temperature: temperature || 0,
+            max_tokens: 1024,
         });
         if(result.status === 200) {
         return result.data;
@@ -150,7 +150,8 @@ export function parseCode(content?: string, starter?: string) {
     return lines.slice(startLine + 1, endLine).join('\n');
 }
 
-export async function insights(table: Table, openaiKey: string): Promise<string[]> {
+export async function insights(table: Table, openaiKey: string, temperature?: number): Promise<{ok: boolean; insights: string[], temperature: number, respContent?: string; error?: any}> {
+    temperature = temperature || 0.5;
     const prompt = INSIGHT_PROMPT.replace('{HEADERS}', table.columns.join(',')).replace(
       '{ROWS}',
       table.rows
@@ -159,18 +160,22 @@ export async function insights(table: Table, openaiKey: string): Promise<string[
         .join('\n')
     );
     const bullet = '- ';
-    const res = await chat(prompt, openaiKey);
+    const res = await chat(prompt, openaiKey, temperature);
     if ((res as OpenaiErrorResult).status) {
-      return [];
+      return {temperature, insights: [], ok: false, error: (res as OpenaiErrorResult).statusText};
     } else {
       try {
         const rough = (res as OpenaiResult).choices[0].message.content || '';
-        return rough
-          .split('\n')
+        return {
+          ok: true,
+          insights: rough.split('\n')
           .filter((l) => l.startsWith(bullet))
-          .map((l) => l.substring(bullet.length).trim());
+          .map((l) => l.substring(bullet.length).trim()),
+          respContent: rough,
+          temperature,
+        }
       } catch (err) {
-        return [];
+        return {ok: false, temperature, insights:[], error: err.message || err};
       }
     }
   }

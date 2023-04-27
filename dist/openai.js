@@ -43,7 +43,7 @@ I will ask you question, you should return a javascript function to show chart, 
 - input parameter as \`table\`
 - the second parameter is the chart container dom element id
 
-You should not to explain the logic, not show sample notes or usages, just write the code.
+You should write code in the first paragraph (Markdown formatted),  then explain the logic after it.
 
 My \`table.columns\` is \`{HEADERS}\`
 My table head rows are """
@@ -56,6 +56,8 @@ const INSIGHT_PROMPT = `You are a data analyzer, who need give some insight ques
 - the question list should bullets listed
 - no explains
 - at most 5 quesions
+
+You should write code in the first paragraph (Markdown formatted),  then explain the logic after it.
 
 My \`table.columns\` is \`{HEADERS}\`
 My table head rows are """
@@ -79,7 +81,6 @@ function decide(columns, question, openaiKey) {
         const configuration = new Configuration({
             apiKey: openaiKey,
         });
-        const openai = new OpenAIApi(configuration);
         const p = exports.DECISION_PROMPT.replace('{HEADERS}', columns.join(','))
             .replace('{QUESTION}', question);
         const res = yield chat(p, openaiKey);
@@ -89,7 +90,7 @@ function decide(columns, question, openaiKey) {
         else {
             try {
                 const rough = res.choices[0].message.content.toLowerCase();
-                return ['chart', 'table', 'number'].find(t => rough.split('\n')[0].indexOf(t) >= 0) || 'unknown';
+                return ['chart', 'table'].find(t => rough.split('\n')[0].indexOf(t) >= 0) || 'unknown';
             }
             catch (err) {
                 return 'unknown';
@@ -99,7 +100,7 @@ function decide(columns, question, openaiKey) {
     });
 }
 exports.decide = decide;
-function chat(prompt, openaiKey) {
+function chat(prompt, openaiKey, temperature) {
     return __awaiter(this, void 0, void 0, function* () {
         const configuration = new Configuration({
             apiKey: openaiKey,
@@ -108,7 +109,7 @@ function chat(prompt, openaiKey) {
         const result = yield openai.createChatCompletion({
             model: exports.CHAT_GPT35_MODEL,
             messages: [{ "role": "user", "content": prompt }],
-            temperature: 0,
+            temperature: temperature || 0,
             max_tokens: 1024,
         });
         if (result.status === 200) {
@@ -138,27 +139,32 @@ function parseCode(content, starter) {
     return lines.slice(startLine + 1, endLine).join('\n');
 }
 exports.parseCode = parseCode;
-function insights(table, openaiKey) {
+function insights(table, openaiKey, temperature) {
     return __awaiter(this, void 0, void 0, function* () {
+        temperature = temperature || 0.5;
         const prompt = INSIGHT_PROMPT.replace('{HEADERS}', table.columns.join(',')).replace('{ROWS}', table.rows
             .slice(0, 5)
             .map((r) => table.columns.map((c) => r[c] || '').join(','))
             .join('\n'));
         const bullet = '- ';
-        const res = yield chat(prompt, openaiKey);
+        const res = yield chat(prompt, openaiKey, temperature);
         if (res.status) {
-            return [];
+            return { temperature, insights: [], ok: false, error: res.statusText };
         }
         else {
             try {
                 const rough = res.choices[0].message.content || '';
-                return rough
-                    .split('\n')
-                    .filter((l) => l.startsWith(bullet))
-                    .map((l) => l.substring(bullet.length).trim());
+                return {
+                    ok: true,
+                    insights: rough.split('\n')
+                        .filter((l) => l.startsWith(bullet))
+                        .map((l) => l.substring(bullet.length).trim()),
+                    respContent: rough,
+                    temperature,
+                };
             }
             catch (err) {
-                return [];
+                return { ok: false, temperature, insights: [], error: err.message || err };
             }
         }
     });
