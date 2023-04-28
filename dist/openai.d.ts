@@ -1,5 +1,7 @@
 import { Table } from './types';
 export declare const exportedFuncName = "window.run";
+export declare const DEFAULT_CHAT_TEMPERATURE = 0;
+export declare const DEFAULT_INSIGHT_TEMPERATURE = 0.5;
 export declare const DECISION_PROMPT = "You are acting as decision maker, you should choose which actions should be token based on my question.\nQuestion Context: Give a csv file, columns is `{HEADERS}`\n\nCandidate actions list:\n1. Chart Function to show chart\n2. Table Function to show the result table\n3. Unknown & Not Sure\n\nYou should not to explain, just show the action number and name.\n\nMy Question: {QUESTION}\n";
 export declare const TABLE_PROMPT: string;
 export declare const CHART_PROMPT: string;
@@ -22,6 +24,7 @@ export interface OpenaiResult {
     };
     finish_reason: string;
     index: number;
+    temperature: number;
 }
 export interface OpenaiErrorResult {
     status: number;
@@ -30,10 +33,12 @@ export interface OpenaiErrorResult {
 export declare function toPrompt(type: 'table' | 'chart', table: Table, question: string, id: string): string;
 export declare function decide(columns: string[], question: string, openaiKey: string): Promise<'chart' | 'table' | 'number' | 'unknown'>;
 export declare function chat(prompt: string, openaiKey: string, temperature?: number): Promise<OpenaiResult | OpenaiErrorResult>;
-export declare function parseCode(content?: string, starter?: string): string;
+export declare function parseCode(content?: string, starter?: string, splitter?: string): string;
 export declare function insights(table: Table, openaiKey: string, temperature?: number): Promise<{
     ok: boolean;
     insights: string[];
+    model: string;
+    prompt: string;
     temperature: number;
     respContent?: string;
     error?: any;

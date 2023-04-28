@@ -2,6 +2,8 @@ import { Table } from './types';
 const { Configuration, OpenAIApi } = require("openai");
 
 export const exportedFuncName = 'window.run';
+export const DEFAULT_CHAT_TEMPERATURE = 0;
+export const DEFAULT_INSIGHT_TEMPERATURE = 0.5;
 
 export const DECISION_PROMPT = `You are acting as decision maker, you should choose which actions should be token based on my question.
 Question Context: Give a csv file, columns is \`{HEADERS}\`
@@ -80,6 +82,7 @@ export interface OpenaiResult {
     }
     finish_reason: string;
     index: number;
+    temperature: number;
 }
 export interface OpenaiErrorResult {
     status: number;
@@ -118,6 +121,7 @@ export async function chat(prompt: string, openaiKey: string, temperature?: numb
     const configuration = new Configuration({
         apiKey: openaiKey,
     });
+    temperature = temperature || DEFAULT_CHAT_TEMPERATURE;
     
     const openai = new OpenAIApi(configuration);
     const result = await openai.createChatCompletion({
@@ -127,7 +131,7 @@ export async function chat(prompt: string, openaiKey: string, temperature?: numb
             max_tokens: 1024,
         });
         if(result.status === 200) {
-        return result.data;
+        return {...result.data, temperature};
         } else {
         return {
             status: result.status,
@@ -136,11 +140,16 @@ export async function chat(prompt: string, openaiKey: string, temperature?: numb
     }
 }
 
-export function parseCode(content?: string, starter?: string) {
+export function parseCode(content?: string, starter?: string, splitter?: string) {
     if(!content) {
         return;
     }
-    if(starter && content.startsWith(starter)) {
+    if(splitter) {
+        const segIndex = content.split('\n').findIndex(c => c === splitter);
+        if(segIndex > 0) {
+            content = content.split('\n').slice(0, segIndex).join('\n');
+        }
+    } else if(starter && content.startsWith(starter)) {
         return content;
     }
     const lines = content.split('\n');
@@ -150,8 +159,10 @@ export function parseCode(content?: string, starter?: string) {
     return lines.slice(startLine + 1, endLine).join('\n');
 }
 
-export async function insights(table: Table, openaiKey: string, temperature?: number): Promise<{ok: boolean; insights: string[], temperature: number, respContent?: string; error?: any}> {
-    temperature = temperature || 0.5;
+export async function insights(table: Table, openaiKey: string, temperature?: number): 
+    Promise<{ok: boolean; insights: string[], model: string; prompt: string; temperature: number, respContent?: string; error?: any}> {
+    temperature = temperature || DEFAULT_INSIGHT_TEMPERATURE;
+    const model = CHAT_GPT35_MODEL;
     const prompt = INSIGHT_PROMPT.replace('{HEADERS}', table.columns.join(',')).replace(
       '{ROWS}',
       table.rows
@@ -162,7 +173,7 @@ export async function insights(table: Table, openaiKey: string, temperature?: nu
     const bullet = '- ';
     const res = await chat(prompt, openaiKey, temperature);
     if ((res as OpenaiErrorResult).status) {
-      return {temperature, insights: [], ok: false, error: (res as OpenaiErrorResult).statusText};
+      return {temperature, insights: [], ok: false, error: (res as OpenaiErrorResult).statusText,model, prompt};
     } else {
       try {
         const rough = (res as OpenaiResult).choices[0].message.content || '';
@@ -173,9 +184,12 @@ export async function insights(table: Table, openaiKey: string, temperature?: nu
           .map((l) => l.substring(bullet.length).trim()),
           respContent: rough,
           temperature,
+          model,
+          prompt
         }
       } catch (err) {
-        return {ok: false, temperature, insights:[], error: err.message || err};
+        return {ok: false, temperature, insights:[],
+            model, prompt, error: err.message || err};
       }
     }
   }

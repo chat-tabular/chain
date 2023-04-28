@@ -9,9 +9,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.insights = exports.parseCode = exports.chat = exports.decide = exports.toPrompt = exports.CHAT_GPT35_MODEL = exports.CHART_PROMPT = exports.TABLE_PROMPT = exports.DECISION_PROMPT = exports.exportedFuncName = void 0;
+exports.insights = exports.parseCode = exports.chat = exports.decide = exports.toPrompt = exports.CHAT_GPT35_MODEL = exports.CHART_PROMPT = exports.TABLE_PROMPT = exports.DECISION_PROMPT = exports.DEFAULT_INSIGHT_TEMPERATURE = exports.DEFAULT_CHAT_TEMPERATURE = exports.exportedFuncName = void 0;
 const { Configuration, OpenAIApi } = require("openai");
 exports.exportedFuncName = 'window.run';
+exports.DEFAULT_CHAT_TEMPERATURE = 0;
+exports.DEFAULT_INSIGHT_TEMPERATURE = 0.5;
 exports.DECISION_PROMPT = `You are acting as decision maker, you should choose which actions should be token based on my question.
 Question Context: Give a csv file, columns is \`{HEADERS}\`
 
@@ -105,6 +107,7 @@ function chat(prompt, openaiKey, temperature) {
         const configuration = new Configuration({
             apiKey: openaiKey,
         });
+        temperature = temperature || exports.DEFAULT_CHAT_TEMPERATURE;
         const openai = new OpenAIApi(configuration);
         const result = yield openai.createChatCompletion({
             model: exports.CHAT_GPT35_MODEL,
@@ -113,7 +116,7 @@ function chat(prompt, openaiKey, temperature) {
             max_tokens: 1024,
         });
         if (result.status === 200) {
-            return result.data;
+            return Object.assign(Object.assign({}, result.data), { temperature });
         }
         else {
             return {
@@ -124,11 +127,17 @@ function chat(prompt, openaiKey, temperature) {
     });
 }
 exports.chat = chat;
-function parseCode(content, starter) {
+function parseCode(content, starter, splitter) {
     if (!content) {
         return;
     }
-    if (starter && content.startsWith(starter)) {
+    if (splitter) {
+        const segIndex = content.split('\n').findIndex(c => c === splitter);
+        if (segIndex > 0) {
+            content = content.split('\n').slice(0, segIndex).join('\n');
+        }
+    }
+    else if (starter && content.startsWith(starter)) {
         return content;
     }
     const lines = content.split('\n');
@@ -141,7 +150,8 @@ function parseCode(content, starter) {
 exports.parseCode = parseCode;
 function insights(table, openaiKey, temperature) {
     return __awaiter(this, void 0, void 0, function* () {
-        temperature = temperature || 0.5;
+        temperature = temperature || exports.DEFAULT_INSIGHT_TEMPERATURE;
+        const model = exports.CHAT_GPT35_MODEL;
         const prompt = INSIGHT_PROMPT.replace('{HEADERS}', table.columns.join(',')).replace('{ROWS}', table.rows
             .slice(0, 5)
             .map((r) => table.columns.map((c) => r[c] || '').join(','))
@@ -149,7 +159,7 @@ function insights(table, openaiKey, temperature) {
         const bullet = '- ';
         const res = yield chat(prompt, openaiKey, temperature);
         if (res.status) {
-            return { temperature, insights: [], ok: false, error: res.statusText };
+            return { temperature, insights: [], ok: false, error: res.statusText, model, prompt };
         }
         else {
             try {
@@ -161,10 +171,13 @@ function insights(table, openaiKey, temperature) {
                         .map((l) => l.substring(bullet.length).trim()),
                     respContent: rough,
                     temperature,
+                    model,
+                    prompt
                 };
             }
             catch (err) {
-                return { ok: false, temperature, insights: [], error: err.message || err };
+                return { ok: false, temperature, insights: [],
+                    model, prompt, error: err.message || err };
             }
         }
     });

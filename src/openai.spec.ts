@@ -13,5 +13,13 @@ window.run=function() {}\n\
 window.run=function() {}\n\
         ```\n\
     the end", 'window.run')).to.be.eq('window.run=function() {}');
+
+    expect(parseCode("```\n\
+window.run=function() {}\n\
+    ```\nExplaination:\
+the end", 'window.run', 'Explaination:')).to.be.eq('window.run=function() {}');
+    expect(parseCode("window.run=function() {}\n\nExplaination:\
+the end", 'window.run', 'Explaination:')).to.be.eq('window.run=function() {}');
     });
+    
 })
