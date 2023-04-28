@@ -127,6 +127,11 @@ function chat(prompt, openaiKey, temperature) {
     });
 }
 exports.chat = chat;
+/**
+ * step 1: split firstly, pickup the first segment
+ * step 2: if start with `starter`, directly return
+ * step 3: if not, find the code between ``` and return the content
+ */
 function parseCode(content, starter, splitter) {
     if (!content) {
         return;
@@ -137,7 +142,7 @@ function parseCode(content, starter, splitter) {
             content = content.split('\n').slice(0, segIndex).join('\n');
         }
     }
-    else if (starter && content.startsWith(starter)) {
+    if (starter && content.startsWith(starter)) {
         return content;
     }
     const lines = content.split('\n');

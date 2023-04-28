@@ -18,8 +18,10 @@ window.run=function() {}\n\
 window.run=function() {}\n\
     ```\nExplaination:\
 the end", 'window.run', 'Explaination:')).to.be.eq('window.run=function() {}');
-    expect(parseCode("window.run=function() {}\n\nExplaination:\
-the end", 'window.run', 'Explaination:')).to.be.eq('window.run=function() {}');
+    expect(parseCode("window.run=function() {}\n\nExplaination:\n\
+the end", 'window.run', 'Explaination:')).to.be.eq('window.run=function() {}\n');
+
+    expect(parseCode("window.run=function() {\n}", 'window.run', 'Explaination:')).to.be.eq('window.run=function() {\n}');
     });
-    
+  
 })

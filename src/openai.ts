@@ -140,6 +140,11 @@ export async function chat(prompt: string, openaiKey: string, temperature?: numb
     }
 }
 
+/**
+ * step 1: split firstly, pickup the first segment
+ * step 2: if start with `starter`, directly return
+ * step 3: if not, find the code between ``` and return the content
+ */
 export function parseCode(content?: string, starter?: string, splitter?: string) {
     if(!content) {
         return;
@@ -149,7 +154,8 @@ export function parseCode(content?: string, starter?: string, splitter?: string)
         if(segIndex > 0) {
             content = content.split('\n').slice(0, segIndex).join('\n');
         }
-    } else if(starter && content.startsWith(starter)) {
+    }
+    if(starter && content.startsWith(starter)) {
         return content;
     }
     const lines = content.split('\n');

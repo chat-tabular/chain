@@ -33,6 +33,11 @@ export interface OpenaiErrorResult {
 export declare function toPrompt(type: 'table' | 'chart', table: Table, question: string, id: string): string;
 export declare function decide(columns: string[], question: string, openaiKey: string): Promise<'chart' | 'table' | 'number' | 'unknown'>;
 export declare function chat(prompt: string, openaiKey: string, temperature?: number): Promise<OpenaiResult | OpenaiErrorResult>;
+/**
+ * step 1: split firstly, pickup the first segment
+ * step 2: if start with `starter`, directly return
+ * step 3: if not, find the code between ``` and return the content
+ */
 export declare function parseCode(content?: string, starter?: string, splitter?: string): string;
 export declare function insights(table: Table, openaiKey: string, temperature?: number): Promise<{
     ok: boolean;
